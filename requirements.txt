@@ -1,0 +1,7 @@
+# ── KisanMitra AI — core dependencies ──────────────────────────
+# Install with:  pip install -r requirements.txt
+
+flask==3.0.3              # Web server that powers the dashboard (app.py)
+openai==1.35.13           # Grok (xAI) API client — OpenAI-compatible SDK
+python-dotenv==1.0.1      # Loads the .env file (API keys, settings)
+requests==2.32.3          # HTTP calls to the free Open-Meteo weather/soil API

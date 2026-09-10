@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KisanMitra AI — Smart Farming Advice Agent</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ═══════════ HEADER ═══════════ -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+        </svg>
+      </span>
+      <div>
+        <h1>KisanMitra <span class="accent">AI</span></h1>
+        <p>The Smart Farming Advice Agent</p>
+      </div>
+    </div>
+    <span class="pill" id="health-pill"><span class="dot"></span>checking…</span>
+  </header>
+
+  <main class="container">
+
+    <!-- ═══════════ HERO ═══════════ -->
+    <section class="hero">
+      <h2>Your field. Four AI agents. One advisor.</h2>
+      <p>Live weather &amp; soil data, a crop knowledge base, photo-based pest
+         detection and mandi price signals — one free personal agronomist.</p>
+      <div class="hero-stats">
+        <div><b>4</b><span>collaborative agents</span></div>
+        <div><b>Live</b><span>weather + soil API</span></div>
+        <div><b>Photo</b><span>vision pest check</span></div>
+        <div><b>₹0</b><span>cost per advisory</span></div>
+      </div>
+    </section>
+
+    <!-- ═══════════ FARMER INPUT FORM ═══════════ -->
+    <section class="card form-card">
+      <h2>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21v-4h4v4"/><path d="M12 21V9h4v12"/><path d="M19 21V13"/></svg>
+        Tell us about your farm
+      </h2>
+      <form id="farm-form">
+        <div class="grid">
+          <label class="field">
+            <span>Village / City</span>
+            <input id="place" name="place" placeholder="e.g. Nashik, Ludhiana, Guntur" required />
+          </label>
+          <label class="field">
+            <span>Crop</span>
+            <select id="crop" name="crop"></select>
+          </label>
+          <label class="field">
+            <span>Growth stage</span>
+            <select id="stage" name="stage">
+              <option>seedling</option><option selected>vegetative</option>
+              <option>tillering</option><option>flowering</option>
+              <option>fruiting</option><option>boll development</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Farm size (acres)</span>
+            <input id="acres" name="acres" type="number" min="0.1" step="0.1" value="2" />
+          </label>
+          <label class="field">
+            <span>Expected harvest (quintals)</span>
+            <input id="quintals" name="quintals" type="number" min="1" step="1" value="40" />
+          </label>
+          <label class="field span-2">
+            <span>Observed symptoms (optional)</span>
+            <input id="symptoms" name="symptoms"
+                   placeholder="e.g. yellow spots on lower leaves, whiteflies near canopy" />
+          </label>
+        </div>
+
+        <!-- photo dropzone -->
+        <div id="dropzone" class="dropzone" tabindex="0" role="button"
+             aria-label="Attach a crop photo for vision analysis">
+          <input id="photo" type="file" accept="image/*" hidden />
+          <div id="dz-empty" class="dz-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/>
+            </svg>
+            <div>
+              <p><b>Drag &amp; drop a leaf photo</b> — or click to browse</p>
+              <em>optional · powers vision-based pest &amp; disease detection</em>
+            </div>
+          </div>
+          <div id="dz-preview" class="dz-preview hidden">
+            <img id="dz-thumb" alt="Uploaded crop photo preview" />
+            <div class="dz-meta"><b id="dz-name"></b><span id="dz-size"></span></div>
+            <button type="button" id="dz-remove" class="dz-remove" aria-label="Remove photo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                   stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" id="run-btn" class="btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                 stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+            Run 4-Agent Advisory
+          </button>
+          <span id="photo-hint" class="photo-hint"></span>
+        </div>
+      </form>
+    </section>
+
+    <!-- ═══════════ AGENT PIPELINE STATUS ═══════════ -->
+    <section id="pipeline" class="pipeline hidden" aria-live="polite">
+      <div class="agent-step" data-agent="weather_irrigation">
+        <span class="ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7Z"/></svg>
+        </span>
+        <p>Weather &amp; Irrigation Agent</p><em>waiting…</em>
+      </div>
+      <div class="agent-step" data-agent="crop_advisory">
+        <span class="ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2 1.9 3.1.5-2.4-.2-4.6-2-6.3C7.7 4 5.5 3.5 3 3.6c.1 2.6.7 4.9 2.4 6.6 1 1 2.3 1.5 3.4 1.7.2-1 .2-1.7.7-2.5Z"/></svg>
+        </span>
+        <p>Crop Advisory Agent</p><em>waiting…</em>
+      </div>
+      <div class="agent-step" data-agent="pest_detection">
+        <span class="ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="7" width="8" height="11" rx="4"/><path d="M12 7V4M8 8 5 6M16 8l3-2M8 13H4M20 13h-4M9 18l-2 3M15 18l2 3"/></svg>
+        </span>
+        <p>Pest Detection Agent</p><em>waiting…</em>
+      </div>
+      <div class="agent-step" data-agent="market_insights">
+        <span class="ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 4 5-8"/></svg>
+        </span>
+        <p>Market Insights Agent</p><em>waiting…</em>
+      </div>
+    </section>
+
+    <!-- ═══════════ RESULT AREA ═══════════ -->
+    <section id="result" class="results hidden">
+
+      <!-- live weather strip -->
+      <div class="card weather-strip">
+        <div class="loc">
+          <h3 id="loc-name">—</h3><span id="loc-country"></span>
+        </div>
+        <div class="wstats">
+          <div><b id="w-temp">—</b><span>°C temp</span></div>
+          <div><b id="w-hum">—</b><span>% humidity</span></div>
+          <div><b id="w-soil">—</b><span>% soil moisture</span></div>
+          <div><b id="w-rain">—</b><span>mm rain today</span></div>
+        </div>
+        <div class="chips">
+          <span class="chip" id="sig-rain"></span>
+          <span class="chip" id="sig-heat"></span>
+          <span class="chip" id="sig-disease"></span>
+        </div>
+      </div>
+
+      <div class="agent-grid">
+
+        <!-- 1. irrigation -->
+        <div class="card agent-card tone-water" id="card-weather_irrigation">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7Z"/></svg>
+            Irrigation &amp; Field Plan
+          </h3>
+          <div class="verdict" id="irrigation-verdict"></div>
+          <p class="why" id="irrigation-why"></p>
+          <ul class="plan" id="irrigation-plan"></ul>
+          <div class="alerts" id="irrigation-alerts"></div>
+        </div>
+
+        <!-- 2. crop advisory -->
+        <div class="card agent-card tone-crop" id="card-crop_advisory">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V8"/><path d="M12 8C12 5 10 3 7 3c0 3 2 5 5 5Z"/><path d="M12 8c0-3 2-5 5-5 0 3-2 5-5 5Z"/><path d="M12 22c4 0 7-2 7-6-2 0-4.5 1-5.5 3"/></svg>
+            Package of Practice
+          </h3>
+          <p class="summary" id="pop-summary"></p>
+          <table class="fert"><tbody id="fert-body"></tbody></table>
+          <div class="do-dont">
+            <div><h4 class="do">Do</h4><ul id="dos"></ul></div>
+            <div><h4 class="dont">Don't</h4><ul id="donts"></ul></div>
+          </div>
+        </div>
+
+        <!-- 3. pest detection -->
+        <div class="card agent-card tone-pest" id="card-pest_detection">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="7" width="8" height="11" rx="4"/><path d="M12 7V4M8 8 5 6M16 8l3-2M8 13H4M20 13h-4M9 18l-2 3M15 18l2 3"/></svg>
+            Pest &amp; Disease Check
+          </h3>
+
+          <!-- photo analysis block — only visible when a photo was attached -->
+          <div id="pest-photo-block" class="photo-block hidden">
+            <img id="pest-photo-thumb" alt="Analyzed crop photo" />
+            <div class="photo-status">
+              <b id="pest-photo-title"></b>
+              <span id="pest-photo-note"></span>
+            </div>
+          </div>
+
+          <div class="verdict" id="pest-verdict"></div>
+          <p class="why" id="pest-what"></p>
+          <p id="pest-organic"></p>
+          <p id="pest-chemical"></p>
+          <ul class="plan" id="pest-prevention"></ul>
+        </div>
+
+        <!-- 4. market -->
+        <div class="card agent-card tone-market" id="card-market_insights">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 4 5-8"/></svg>
+            Market Advice
+          </h3>
+          <div class="verdict" id="market-verdict"></div>
+          <p class="why" id="market-reason"></p>
+          <p id="market-band"></p>
+          <p id="market-channel"></p>
+          <p class="tip" id="market-tip"></p>
+        </div>
+      </div>
+
+      <p class="engine-line" id="engine-line"></p>
+    </section>
+  </main>
+
+  <footer>
+    <p>KisanMitra AI · IBM University Engagement Project · Problem Statement No.14</p>
+    <p>Powered by <b>Grok (xAI)</b> or any OpenAI-compatible provider (see <code>.env</code>) + Open-Meteo free APIs</p>
+  </footer>
+
+  <div id="toast" class="toast hidden" role="alert"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let photoFile = null;
+    let photoPreviewURL = null;
+
+    /* ── health pill ─────────────────────────────── */
+    fetch("/api/health").then((r) => r.json()).then((h) => {
+      const pill = $("health-pill");
+      if (h.llm_enabled) {
+        pill.classList.add("ok");
+        pill.innerHTML = '<span class="dot"></span>LLM live · ' + h.text_model;
+      } else {
+        pill.classList.add("warn");
+        pill.innerHTML = '<span class="dot"></span>fallback mode (no API key)';
+      }
+    }).catch(() => {
+      const pill = $("health-pill");
+      pill.classList.add("warn");
+      pill.innerHTML = '<span class="dot"></span>server unreachable';
+    });
+
+    /* ── crops dropdown ──────────────────────────── */
+    const FALLBACK_CROPS = ["wheat", "rice", "cotton", "tomato", "sugarcane", "maize"];
+    fetch("/api/crops").then((r) => r.json()).then((d) => {
+      const crops = (d.crops && d.crops.length) ? d.crops : FALLBACK_CROPS;
+      $("crop").innerHTML = crops.map((c) =>
+        `<option value="${c}" ${c === "wheat" ? "selected" : ""}>${c}</option>`).join("");
+    }).catch(() => {
+      $("crop").innerHTML = FALLBACK_CROPS.map((c) => `<option>${c}</option>`).join("");
+    });
+
+    /* ── photo dropzone ──────────────────────────── */
+    const dz = $("dropzone"), fileInput = $("photo");
+
+    dz.addEventListener("click", () => fileInput.click());
+    dz.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); }
+    });
+    ["dragover", "dragenter"].forEach((ev) =>
+      dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add("drag"); }));
+    ["dragleave", "drop"].forEach((ev) =>
+      dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove("drag"); }));
+    dz.addEventListener("drop", (e) => setPhoto(e.dataTransfer.files[0] || null));
+    fileInput.addEventListener("change", (e) => setPhoto(e.target.files[0] || null));
+    $("dz-remove").addEventListener("click", (e) => { e.stopPropagation(); setPhoto(null); });
+
+    function setPhoto(file) {
+      if (file && !file.type.startsWith("image/")) {
+        toast("That file is not an image — please pick a photo of the crop.");
+        return;
+      }
+      photoFile = file;
+      if (photoPreviewURL) URL.revokeObjectURL(photoPreviewURL);
+      if (file) {
+        photoPreviewURL = URL.createObjectURL(file);
+        $("dz-thumb").src = photoPreviewURL;
+        $("dz-name").textContent = file.name;
+        $("dz-size").textContent = (file.size / 1024).toFixed(0) + " KB · " + file.type.replace("image/", "");
+        $("dz-empty").classList.add("hidden");
+        $("dz-preview").classList.remove("hidden");
+        $("photo-hint").textContent = "Photo attached — pest agent will use vision analysis";
+      } else {
+        $("dz-empty").classList.remove("hidden");
+        $("dz-preview").classList.add("hidden");
+        $("photo-hint").textContent = "";
+        fileInput.value = "";
+      }
+    }
+
+    /* ── submit → one multipart call (photo included) ── */
+    $("farm-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = $("run-btn");
+      btn.disabled = true;
+      btn.classList.add("busy");
+      $("result").classList.add("hidden");
+      $("pipeline").classList.remove("hidden");
+      resetPipeline();
+      startPipelineAnimation();
+
+      const form = new FormData();
+      form.append("place", $("place").value.trim());
+      form.append("crop", $("crop").value);
+      form.append("stage", $("stage").value);
+      form.append("symptoms", $("symptoms").value.trim());
+      form.append("acres", $("acres").value || "2");
+      form.append("quintals", $("quintals").value || "40");
+      if (photoFile) form.append("photo", photoFile);
+
+      try {
+        const res = await fetch("/api/analyze", { method: "POST", body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "request failed");
+        finishPipelineAnimation(data);
+        render(data);
+      } catch (err) {
+        toast("Error: " + err.message);
+        $("pipeline").classList.add("hidden");
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove("busy");
+      }
+    });
+
+    /* ── pipeline animation ──────────────────────── */
+    const ORDER = ["weather_irrigation", "crop_advisory", "pest_detection", "market_insights"];
+    const timers = [];
+
+    function resetPipeline() {
+      timers.forEach(clearTimeout); timers.length = 0;
+      document.querySelectorAll(".agent-step").forEach((el) => {
+        el.className = "agent-step";
+        el.querySelector("em").textContent = "waiting…";
+      });
+    }
+
+    function startPipelineAnimation() {
+      ORDER.forEach((role, i) => {
+        timers.push(setTimeout(() => {
+          const el = document.querySelector(`.agent-step[data-agent="${role}"]`);
+          el.classList.add("running");
+          el.querySelector("em").innerHTML = '<span class="spinner"></span> working…';
+        }, 500 * i));
+      });
+    }
+
+    function finishPipelineAnimation(report) {
+      timers.forEach(clearTimeout); timers.length = 0;
+      ORDER.forEach((role) => {
+        const el = document.querySelector(`.agent-step[data-agent="${role}"]`);
+        const res = (report.agents || {})[role] || {};
+        el.classList.remove("running");
+        el.classList.add("done");
+        el.querySelector("em").textContent =
+          `${res.source || "?"} · ${res.latency_seconds ?? "?"}s` +
+          (role === "pest_detection" && res.photo_received ? " · photo" : "");
+      });
+    }
+
+    /* ── render results ──────────────────────────── */
+    function render(r) {
+      $("result").classList.remove("hidden");
+      $("loc-name").textContent = r.location.name;
+      $("loc-country").textContent = `${r.location.admin1 || ""}, ${r.location.country || ""}`;
+      $("w-temp").textContent = r.weather.temperature_c;
+      $("w-hum").textContent = r.weather.humidity_pct;
+      $("w-soil").textContent = r.weather.soil_moisture_pct;
+      $("w-rain").textContent = r.weather.precipitation_mm;
+      $("sig-rain").textContent = `rain risk: ${r.signals.rain_risk}`;
+      $("sig-heat").textContent = `heat: ${r.signals.heat_stress}`;
+      $("sig-disease").textContent = `disease pressure: ${r.signals.disease_pressure}`;
+
+      const irr = r.agents.weather_irrigation || {};
+      const water = irr.irrigation || {};
+      $("irrigation-verdict").textContent = water.water_today ? "Water today" : "Skip watering today";
+      $("irrigation-why").textContent = water.reason || "";
+      $("irrigation-plan").innerHTML = (irr.field_plan || [])
+        .map((p) => `<li><b>${p.action}</b> — ${p.day} · ${p.reason}</li>`).join("");
+      $("irrigation-alerts").innerHTML = (irr.alerts || [])
+        .map((a) => `<div class="alert">${a}</div>`).join("");
+
+      const adv = r.agents.crop_advisory || {};
+      $("pop-summary").textContent = adv.package_of_practice || "";
+      $("fert-body").innerHTML = (adv.fertilizer_plan || [])
+        .map((f) => `<tr><td>${f.input}</td><td>${f.dose}</td><td>${f.timing}</td></tr>`).join("");
+      $("dos").innerHTML = (adv.dos || []).map((d) => `<li>${d}</li>`).join("");
+      $("donts").innerHTML = (adv.donts || []).map((d) => `<li>${d}</li>`).join("");
+
+      const pest = r.agents.pest_detection || {};
+      renderPestPhotoBlock(pest);
+      $("pest-verdict").textContent = pest.threat || "—";
+      $("pest-what").textContent = pest.what_you_see || "";
+      $("pest-organic").innerHTML = pest.organic_remedy ? `<b>Organic:</b> ${pest.organic_remedy}` : "";
+      $("pest-chemical").innerHTML = pest.chemical_remedy ? `<b>Chemical:</b> ${pest.chemical_remedy}` : "";
+      $("pest-prevention").innerHTML = (pest.prevention || []).map((p) => `<li>${p}</li>`).join("");
+
+      const mkt = r.agents.market_insights || {};
+      $("market-verdict").textContent = mkt.recommendation || "—";
+      $("market-reason").textContent = mkt.reason || "";
+      const band = mkt.expected_price_band || {};
+      $("market-band").innerHTML = band.low ? `<b>₹${band.low}–₹${band.high}</b> per quintal expected` : "";
+      $("market-channel").innerHTML = mkt.best_channel ? `<b>Channel:</b> ${mkt.best_channel}` : "";
+      $("market-tip").innerHTML = mkt.income_tip ? mkt.income_tip : "";
+
+      const sources = Object.values(r.agents).map((a) => a.source || "?");
+      const photoWord = pest.photo_analyzed ? "photo analyzed by vision"
+        : pest.photo_received ? "photo received (vision off)" : "no photo";
+      $("engine-line").textContent =
+        `Engines: ${sources.join(", ")} · ${photoWord} · total tokens: ${r.total_tokens_used || 0}`;
+      $("result").scrollIntoView({ behavior: "smooth" });
+    }
+
+    /* ── pest photo block — THE visible difference ── */
+    function renderPestPhotoBlock(pest) {
+      const block = $("pest-photo-block");
+      if (!pest.photo_received) { block.classList.add("hidden"); return; }
+      block.classList.remove("hidden");
+      if (photoPreviewURL) $("pest-photo-thumb").src = photoPreviewURL;
+      if (pest.photo_analyzed) {
+        block.classList.add("ok");
+        block.classList.remove("warn");
+        $("pest-photo-title").textContent = "Photo analyzed by vision AI";
+        $("pest-photo-note").textContent = pest.vision_note || "vision model";
+      } else {
+        block.classList.add("warn");
+        block.classList.remove("ok");
+        $("pest-photo-title").textContent = "Photo received — vision not active";
+        $("pest-photo-note").textContent = pest.vision_note ||
+          "Set GROK_VISION_MODEL in .env to a vision model on your provider.";
+      }
+    }
+
+    /* ── toast ───────────────────────────────────── */
+    let toastTimer = null;
+    function toast(msg) {
+      const t = $("toast");
+      t.textContent = msg;
+      t.classList.remove("hidden");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.add("hidden"), 6000);
+    }
+  </script>
+</body>
+</html>
